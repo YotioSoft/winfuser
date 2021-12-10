@@ -41,7 +41,7 @@ void Main()
 
 
 	//bool get = GetFileInformationByHandle()
-
+	HANDLE hHandle = CreateEvent(NULL, FALSE, TRUE, L"sample");
 
 	while (System::Update())
 	{
@@ -63,18 +63,31 @@ void Main()
 			}
 
 			// システム上のすべてのハンドルを取得
+			DWORD dwPID = GetCurrentProcessId();
 			PSYSTEM_HANDLE_INFORMATION pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION;
 			DWORD sys_hwnd_info_size = sizeof(pSysHandleInformation);
 			DWORD needed = 0;
 			NTSTATUS status;
 
 			do {
-				delete(pSysHandleInformation);
+				free(pSysHandleInformation);
 				pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION;
 				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)0x10, pSysHandleInformation, sys_hwnd_info_size, &needed);
 				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO) * 0x10000;
 				Print << sys_hwnd_info_size;
 			} while (status == STATUS_INFO_LENGTH_MISMATCH);
+
+			if (NT_ERROR(status)) {
+				Console << U"Error";
+				free(pSysHandleInformation);
+				continue;
+			}
+
+			for (ULONG i = 0; i < pSysHandleInformation->HandleCount; i++) {
+				if (pSysHandleInformation->Handles[i].UniqueProcessId == dwPID && pSysHandleInformation->Handles[i].HandleValue == (USHORT)hHandle) {
+					Print << pSysHandleInformation->Handles[i].Object;
+				}
+			}
 		}
 	}
 }
