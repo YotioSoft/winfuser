@@ -1,14 +1,4 @@
-﻿#include <Siv3D.hpp> // OpenSiv3D v0.6.3
-#include <Siv3D/Windows/Windows.hpp>
-#include <fileapi.h>
-#include <string>
-#include <regex>
-
-#include <winternl.h>
-#include <ntstatus.h>
-
-#include <RestartManager.h>
-#include <winerror.h>
+﻿#include "header.h"
 
 #pragma comment(lib, "Rstrtmgr.lib")
 
@@ -61,36 +51,7 @@ void Main()
 			Array<DroppedFilePath> files = DragDrop::GetDroppedFilePaths();
 			int files_n = files.size();
 
-			// Win32でファイル読み込み
-			// 読み取りアクセス、
-			//HANDLE hFile = CreateFileA(file_path.c_str(), GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-			//Print << hFile;
-
-			/*if (hFile == INVALID_HANDLE_VALUE) {
-				printf("CreateFile failed\n");
-				return 1;
-			}*/
-
-			//BY_HANDLE_FILE_INFORMATION file_information;
-			//GetFileInformationByHandle(hFile, &file_information);
-
-			//Print << file_information.ftCreationTime.dwLowDateTime;
-
-			//NtQuerySystemInformation
-
-			// RestartManagerセッションの開始
-			DWORD dw_session, dw_error;
-			WCHAR sz_session_key[CCH_RM_SESSION_KEY + 1]{};
-
-			dw_error = RmStartSession(&dw_session, 0, sz_session_key);
-			if (dw_error != ERROR_SUCCESS) {
-				throw std::runtime_error("fail to start restart manager.");
-			}
-
-			// ファイルをセッションに登録
-			//wchar_t* buf;
-			//file_path.toWstr().assign(buf);
+			// ファイルリスト
 			LPCWSTR files_list[256] = {};
 			for (int i = 0; i < files_n; i++) {
 				std::string str = files[i].path.toUTF8();
@@ -100,69 +61,20 @@ void Main()
 				files_list[i] = L"D:\\git\\team8_main\\trr.txt";//(LPCWSTR)wstr.c_str();
 				Print << Unicode::FromWstring((std::wstring)files_list[i]);
 			}
-			dw_error = RmRegisterResources(dw_session, files_n, files_list, 0, NULL, 0, NULL);
-			if (dw_error != ERROR_SUCCESS) {
-				Console << U"Err";
-				throw std::runtime_error("fail to register target files.");
-			}
 
-			// そのファイルを使用しているプロセスの一覧を取得
-			UINT n_proc_info_needed = 0;
-			UINT n_proc_info = 0;
-			RM_PROCESS_INFO rgpi[256];
-			DWORD dw_reason;
+			// システム上のすべてのハンドルを取得
+			PSYSTEM_HANDLE_INFORMATION pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION;
+			DWORD sys_hwnd_info_size = sizeof(pSysHandleInformation);
+			DWORD needed = 0;
+			NTSTATUS status;
 
-			dw_error = RmGetList(dw_session, &n_proc_info_needed, &n_proc_info, rgpi, &dw_reason);
-			
-			if (dw_error == ERROR_MORE_DATA) {
-				Print << U"this file is opened by " << (int)n_proc_info_needed;
-
-			}
-			else if (dw_error == ERROR_SUCCESS) {
-				Print << U"this file is opened by " << (int)n_proc_info_needed << U"processes.";
-			}
-			else {
-				Print << U"Error";
-				break;
-			}
-			if (dw_error != ERROR_SUCCESS) {
-				throw std::runtime_error("fail to get process list.");
-			}
-			
-			RmEndSession(dw_session);
-
-			Print << U"Total: " << n_proc_info_needed;
-			for (int i = 0; i < n_proc_info_needed; i++) {
-				Print << rgpi[i].Process.dwProcessId;
-			}
+			do {
+				delete(pSysHandleInformation);
+				pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION;
+				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)0x10, pSysHandleInformation, sys_hwnd_info_size, &needed);
+				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO) * 0x10000;
+				Print << sys_hwnd_info_size;
+			} while (status == STATUS_INFO_LENGTH_MISMATCH);
 		}
 	}
 }
-
-//
-// = アドバイス =
-// Debug ビルドではプログラムの最適化がオフになります。
-// 実行速度が遅いと感じた場合は Release ビルドを試しましょう。
-// アプリをリリースするときにも、Release ビルドにするのを忘れないように！
-//
-// 思ったように動作しない場合は「デバッグの開始」でプログラムを実行すると、
-// 出力ウィンドウに詳細なログが表示されるので、エラーの原因を見つけやすくなります。
-//
-// = お役立ちリンク | Quick Links =
-//
-// Siv3D リファレンス
-// https://zenn.dev/reputeless/books/siv3d-documentation
-//
-// Siv3D Reference
-// https://zenn.dev/reputeless/books/siv3d-documentation-en
-//
-// Siv3D コミュニティへの参加
-// Slack や Twitter, BBS で気軽に質問や情報交換ができます。
-// https://zenn.dev/reputeless/books/siv3d-documentation/viewer/community
-//
-// Siv3D User Community
-// https://zenn.dev/reputeless/books/siv3d-documentation-en/viewer/community
-//
-// 新機能の提案やバグの報告 | Feedback
-// https://github.com/Siv3D/OpenSiv3D/issues
-//
