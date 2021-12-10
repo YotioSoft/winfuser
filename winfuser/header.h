@@ -41,16 +41,19 @@ NtQueryObject_t fpNtQueryObject = (NtQueryObject_t)GetProcAddress(hNtDll, "NtQue
 NtQuerySystemInformation_t fpNtQuerySystemInformation = (NtQuerySystemInformation_t)GetProcAddress(hNtDll, "NtQuerySystemInformation");
 
 typedef struct {
-	USHORT UniqueProcessId;
-	USHORT CreatorBackTraceIndex;
-	UCHAR ObjectTypeIndex;
-	UCHAR HandleAttributes;
-	USHORT HandleValue;
 	PVOID Object;
+	ULONG_PTR UniqueProcessId;
+	ULONG_PTR HandleValue;
 	ULONG GrantedAccess;
-} SYSTEM_HANDLE_TABLE_ENTRY_INFO, * PSYSTEM_HANDLE_TABLE_ENTRY_INFO;
+	USHORT CreatorBackTraceIndex;
+	USHORT ObjectTypeIndex;
+	ULONG HansldAttributes;
+	ULONG Reserved;
+} SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX, * PSYSTEM_HANDLE_TABLE_ENTRY_INFO_EX;
 
 typedef struct {
 	ULONG HandleCount;
-	SYSTEM_HANDLE_TABLE_ENTRY_INFO Handles[1];
-} SYSTEM_HANDLE_INFORMATION, * PSYSTEM_HANDLE_INFORMATION;
+	SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX Handles[1];
+} SYSTEM_HANDLE_INFORMATION_EX, * PSYSTEM_HANDLE_INFORMATION_EX;
+
+static const int SystemExtendedHandleInformation = 0x40;

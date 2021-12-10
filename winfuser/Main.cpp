@@ -64,29 +64,43 @@ void Main()
 
 			// システム上のすべてのハンドルを取得
 			DWORD dwPID = GetCurrentProcessId();
-			PSYSTEM_HANDLE_INFORMATION pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION;
+			PSYSTEM_HANDLE_INFORMATION_EX pSysHandleInformation = NULL;
 			DWORD sys_hwnd_info_size = sizeof(pSysHandleInformation);
 			DWORD needed = 0;
 			NTSTATUS status;
 
 			do {
+				/*
 				free(pSysHandleInformation);
-				pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION;
-				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)0x10, pSysHandleInformation, sys_hwnd_info_size, &needed);
-				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO) * 0x10000;
+				pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION_EX;
+				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemExtendedHandleInformation, pSysHandleInformation, sys_hwnd_info_size, &needed);
+				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX) * 0x10000;
 				Print << sys_hwnd_info_size;
+				*/
+				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX) * 0x10000;
+				PSYSTEM_HANDLE_INFORMATION_EX newPtr = (PSYSTEM_HANDLE_INFORMATION_EX)realloc(pSysHandleInformation, sys_hwnd_info_size);
+				if (NULL == newPtr)
+					break;
+				pSysHandleInformation = newPtr;
+				ULONG returnLength = 0;
+				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemExtendedHandleInformation, pSysHandleInformation, sys_hwnd_info_size, &returnLength);
 			} while (status == STATUS_INFO_LENGTH_MISMATCH);
 
 			if (NT_ERROR(status)) {
 				Console << U"Error";
-				free(pSysHandleInformation);
+				delete(pSysHandleInformation);
 				continue;
 			}
-
+			Print << U"TOTAL: " << pSysHandleInformation->HandleCount;
 			for (ULONG i = 0; i < pSysHandleInformation->HandleCount; i++) {
-				if (pSysHandleInformation->Handles[i].UniqueProcessId == dwPID && pSysHandleInformation->Handles[i].HandleValue == (USHORT)hHandle) {
+				/*if (pSysHandleInformation->Handles[i].UniqueProcessId == dwPID && pSysHandleInformation->Handles[i].HandleValue == (USHORT)hHandle) {
 					Print << pSysHandleInformation->Handles[i].Object;
-				}
+				}*/
+
+				// FileTypeでなければスキップ
+				//SYSTEM_HANDLE&
+
+				Console << i << U":" << pSysHandleInformation->Handles[i].ObjectTypeIndex;
 			}
 		}
 	}
