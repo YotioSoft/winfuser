@@ -97,11 +97,12 @@ void Main()
 				str = std::regex_replace(str, std::regex("/"), "\\");
 				std::wstring wstr = Unicode::FromUTF8(str).toWstr();
 
-				files_list[i] = wstr.c_str();
-				Print << Unicode::FromWstring(wstr);
+				files_list[i] = L"D:\\git\\team8_main\\trr.txt";//(LPCWSTR)wstr.c_str();
+				Print << Unicode::FromWstring((std::wstring)files_list[i]);
 			}
-			dw_error = RmRegisterResources(dw_session, files_n, files_list, 0U, NULL, 0U, NULL);
+			dw_error = RmRegisterResources(dw_session, files_n, files_list, 0, NULL, 0, NULL);
 			if (dw_error != ERROR_SUCCESS) {
+				Console << U"Err";
 				throw std::runtime_error("fail to register target files.");
 			}
 
@@ -112,6 +113,7 @@ void Main()
 			DWORD dw_reason;
 
 			dw_error = RmGetList(dw_session, &n_proc_info_needed, &n_proc_info, rgpi, &dw_reason);
+			
 			if (dw_error == ERROR_MORE_DATA) {
 				Print << U"this file is opened by " << (int)n_proc_info_needed;
 
@@ -126,7 +128,7 @@ void Main()
 			if (dw_error != ERROR_SUCCESS) {
 				throw std::runtime_error("fail to get process list.");
 			}
-
+			
 			RmEndSession(dw_session);
 
 			Print << U"Total: " << n_proc_info_needed;
