@@ -98,10 +98,23 @@ void Main()
 				}*/
 
 				// FileTypeでなければスキップ
-				//SYSTEM_HANDLE&
 
-				Console << i << U":" << pSysHandleInformation->Handles[i].ObjectTypeIndex;
+				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId;
+
+				HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, false, pSysHandleInformation->Handles[i].HandleValue);
+				if (hProcess == INVALID_HANDLE_VALUE) {
+					Console << U"Open Error";
+					continue;
+				}
+				Console << GetLastError() << U" " << hProcess;
+
+				if (hProcess == 0) {
+					continue;
+				}
+
+				//GetModuleFileNameEx(hProcess, )
 			}
+			Print << U"Done.";
 		}
 	}
 }
