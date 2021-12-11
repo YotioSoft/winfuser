@@ -97,9 +97,10 @@ void Main()
 				str = std::regex_replace(str, std::regex("/"), "\\");
 				std::wstring wstr = Unicode::FromUTF8(str).toWstr();
 
-				files_list[i] = L"D:\\git\\team8_main\\trr.txt";//(LPCWSTR)wstr.c_str();
-				Print << Unicode::FromWstring((std::wstring)files_list[i]);
+				files_list[i] = L"D:\\func2.csv";//(LPCWSTR)wstr.c_str();
+				Print << Unicode::FromWstring(std::wstring(files_list[i]));
 			}
+			//PCWSTR file_path = L"D:\\ts.txt";
 			dw_error = RmRegisterResources(dw_session, files_n, files_list, 0, NULL, 0, NULL);
 			if (dw_error != ERROR_SUCCESS) {
 				Console << U"Err";
@@ -108,15 +109,18 @@ void Main()
 
 			// そのファイルを使用しているプロセスの一覧を取得
 			UINT n_proc_info_needed = 0;
-			UINT n_proc_info = 0;
-			RM_PROCESS_INFO rgpi[256];
+			UINT n_proc_info = 256;
+			RM_PROCESS_INFO* rgpi = new RM_PROCESS_INFO[n_proc_info];
 			DWORD dw_reason;
 
 			dw_error = RmGetList(dw_session, &n_proc_info_needed, &n_proc_info, rgpi, &dw_reason);
-			
+
 			if (dw_error == ERROR_MORE_DATA) {
 				Print << U"this file is opened by " << (int)n_proc_info_needed;
-
+				delete[] rgpi;
+				n_proc_info = n_proc_info_needed;
+				rgpi = new RM_PROCESS_INFO[n_proc_info];
+				dw_error = RmGetList(dw_session, &n_proc_info_needed, &n_proc_info, rgpi, &dw_reason);
 			}
 			else if (dw_error == ERROR_SUCCESS) {
 				Print << U"this file is opened by " << (int)n_proc_info_needed << U"processes.";
@@ -126,14 +130,17 @@ void Main()
 				break;
 			}
 			if (dw_error != ERROR_SUCCESS) {
-				throw std::runtime_error("fail to get process list.");
+				Print << dw_error;
+				//throw std::runtime_error("fail to get process list.");
 			}
 			
 			RmEndSession(dw_session);
 
 			Print << U"Total: " << n_proc_info_needed;
 			for (int i = 0; i < n_proc_info_needed; i++) {
-				Print << rgpi[i].Process.dwProcessId;
+				Print << U"プロセスID: " << rgpi[i].Process.dwProcessId;
+				Print << U"アプリ名: " << Unicode::FromWstring((std::wstring)rgpi[i].strAppName);
+				Print << U"アプリのタイプ：: " << rgpi[i].ApplicationType;
 			}
 		}
 	}
