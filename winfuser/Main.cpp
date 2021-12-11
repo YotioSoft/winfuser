@@ -46,75 +46,52 @@ void Main()
 	while (System::Update())
 	{
 		// ファイルがドラッグアンドドロップされたら
-		if (DragDrop::HasNewFilePaths()) {
-			// ファイルの総数
-			Array<DroppedFilePath> files = DragDrop::GetDroppedFilePaths();
-			int files_n = files.size();
+		DWORD ProcessIDs[1000];
+		DWORD ProcessNum;
+		HMODULE Modules[1000];
+		DWORD ModuleNum;
+		char FileName[1000];
+		DWORD RetSize;
+		DWORD i, j;
+		HANDLE hProcess;
+		BOOL bResult;
 
-			// ファイルリスト
-			LPCWSTR files_list[256] = {};
-			for (int i = 0; i < files_n; i++) {
-				std::string str = files[i].path.toUTF8();
-				str = std::regex_replace(str, std::regex("/"), "\\");
-				std::wstring wstr = Unicode::FromUTF8(str).toWstr();
+		/* プロセスの一覧と数を取得 */
+		EnumProcesses(ProcessIDs, sizeof(ProcessIDs), &RetSize);
+		ProcessNum = RetSize / sizeof(DWORD);
 
-				files_list[i] = L"D:\\git\\team8_main\\trr.txt";//(LPCWSTR)wstr.c_str();
-				Print << Unicode::FromWstring((std::wstring)files_list[i]);
+		for (i = 0; i < ProcessNum; i++) {
+			Console << U"プロセスID: " << ProcessIDs[i];
+
+			hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ProcessIDs[i]);
+
+			if (hProcess == NULL) {
+				Console << U"オープン失敗.";
 			}
+			else {
+				/* プロセス中のモジュールの一覧を取得 */
+				bResult = EnumProcessModules(hProcess, Modules, sizeof(Modules), &RetSize);
+				if (bResult) {
+					ModuleNum = RetSize / sizeof(HMODULE);
 
-			// システム上のすべてのハンドルを取得
-			DWORD dwPID = GetCurrentProcessId();
-			PSYSTEM_HANDLE_INFORMATION_EX pSysHandleInformation = NULL;
-			DWORD sys_hwnd_info_size = sizeof(pSysHandleInformation);
-			DWORD needed = 0;
-			NTSTATUS status;
-
-			do {
-				/*
-				free(pSysHandleInformation);
-				pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION_EX;
-				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemExtendedHandleInformation, pSysHandleInformation, sys_hwnd_info_size, &needed);
-				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX) * 0x10000;
-				Print << sys_hwnd_info_size;
-				*/
-				sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX) * 0x10000;
-				PSYSTEM_HANDLE_INFORMATION_EX newPtr = (PSYSTEM_HANDLE_INFORMATION_EX)realloc(pSysHandleInformation, sys_hwnd_info_size);
-				if (NULL == newPtr)
-					break;
-				pSysHandleInformation = newPtr;
-				ULONG returnLength = 0;
-				status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemExtendedHandleInformation, pSysHandleInformation, sys_hwnd_info_size, &returnLength);
-			} while (status == STATUS_INFO_LENGTH_MISMATCH);
-
-			if (NT_ERROR(status)) {
-				Console << U"Error";
-				delete(pSysHandleInformation);
-				continue;
-			}
-			Print << U"TOTAL: " << pSysHandleInformation->HandleCount;
-			for (ULONG i = 0; i < pSysHandleInformation->HandleCount; i++) {
-				/*if (pSysHandleInformation->Handles[i].UniqueProcessId == dwPID && pSysHandleInformation->Handles[i].HandleValue == (USHORT)hHandle) {
-					Print << pSysHandleInformation->Handles[i].Object;
-				}*/
-
-				// FileTypeでなければスキップ
-
-				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId;
-
-				HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, false, pSysHandleInformation->Handles[i].HandleValue);
-				if (hProcess == INVALID_HANDLE_VALUE) {
-					Console << U"Open Error";
-					continue;
+					/* 各モジュールのファイル名を表示 */
+					for (j = 0; j < ModuleNum; j++) {
+						GetModuleFileNameEx(hProcess, Modules[j], (LPWSTR)FileName, 1000);
+						for (int k = 0; k < 1000; k++) {
+							if (FileName[k] == '\0') {
+								continue;
+							}
+							Console << FileName[k];
+						}
+						Console << U"----";
+					}
 				}
-				Console << GetLastError() << U" " << hProcess;
-
-				if (hProcess == 0) {
-					continue;
+				else {
+					Console << U"モジュール一覧の取得に失敗.";
 				}
 
-				//GetModuleFileNameEx(hProcess, )
+				CloseHandle(hProcess);
 			}
-			Print << U"Done.";
 		}
 	}
 }
