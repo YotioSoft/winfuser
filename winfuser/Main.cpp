@@ -108,9 +108,14 @@ void Main()
 				}
 				Console << GetLastError() << U" " << hProcess;
 
-				if (hProcess == 0) {
+				// ファイル名を取得
+				LPWSTR using_filepath = {};
+				int using_filepath_size = 2048;
+				if (GetFinalPathNameByHandle(hProcess, using_filepath, using_filepath_size, 0) == 0) {
+					Console << U"GetFinalPathNameByHandle failed: " << GetLastError();
 					continue;
 				}
+				Console << Unicode::FromWstring((std::wstring)using_filepath);
 
 				//GetModuleFileNameEx(hProcess, )
 			}

@@ -13,6 +13,7 @@
 #include <winerror.h>
 #include <atlstr.h>
 #include <Psapi.h>
+#include <fileapi.h>
 
 #include <sysinfoapi.h>
 
