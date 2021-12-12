@@ -10,6 +10,8 @@
 #include <RestartManager.h>
 #include <winerror.h>
 
+#include <locale.h>
+
 #pragma comment(lib, "Rstrtmgr.lib")
 
 #define GENERIC_READ			0x80000000L
@@ -24,6 +26,8 @@
 
 void Main()
 {
+	setlocale(LC_CTYPE, "");
+
 	// 背景の色を設定 | Set background color
 	Scene::SetBackground(ColorF{ 0.8, 0.9, 1.0 });
 
@@ -97,8 +101,8 @@ void Main()
 				str = std::regex_replace(str, std::regex("/"), "\\");
 				std::wstring wstr = Unicode::FromUTF8(str).toWstr();
 
-				files_list[i] = L"D:\\func2.csv";//(LPCWSTR)wstr.c_str();
-				Print << Unicode::FromWstring(std::wstring(files_list[i]));
+				files_list[i] = L"D:\\課題表紙.docx";//(LPCWSTR)wstr.c_str();
+				Print << Unicode::FromWstring(files_list[i]);
 			}
 			//PCWSTR file_path = L"D:\\ts.txt";
 			dw_error = RmRegisterResources(dw_session, files_n, files_list, 0, NULL, 0, NULL);
