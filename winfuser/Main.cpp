@@ -115,48 +115,27 @@ void Main()
 					continue;
 				}
 				*/
-				ULONG handle_type_size;
-				PPUBLIC_OBJECT_TYPE_INFORMATION handle_type = NULL;
-				NTSTATUS status;
-				handle_type_size = sizeof(handle_type);
-
-				do {
-					/*
-					free(pSysHandleInformation);
-					pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION_EX;
-					status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemExtendedHandleInformation, pSysHandleInformation, sys_hwnd_info_size, &needed);
-					sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX) * 0x10000;
-					Print << sys_hwnd_info_size;
-					*/
-					handle_type_size += sizeof(PUBLIC_OBJECT_TYPE_INFORMATION) * 0x10000;
-					Console << handle_type_size;
-					PPUBLIC_OBJECT_TYPE_INFORMATION newPtr = (PPUBLIC_OBJECT_TYPE_INFORMATION)realloc(handle_type, handle_type_size);
-					if (NULL == newPtr)
-						break;
-					handle_type = newPtr;
-					ULONG returnLength = 0;
-					status = fpNtQueryObject((HANDLE)pSysHandleInformation->Handles[i].HandleValue, ObjectTypeInformation, handle_type, 0, &handle_type_size);
-				} while (status == STATUS_INFO_LENGTH_MISMATCH);
+				ULONG handle_type_size = 0;
+				fpNtQueryObject((HANDLE)pSysHandleInformation->Handles[i].HandleValue, ObjectTypeInformation, NULL, 0, &handle_type_size);
+				PPUBLIC_OBJECT_TYPE_INFORMATION handle_type = (PPUBLIC_OBJECT_TYPE_INFORMATION)malloc(handle_type_size);
+				
+				NTSTATUS status = fpNtQueryObject((HANDLE)pSysHandleInformation->Handles[i].HandleValue, ObjectTypeInformation, handle_type, handle_type_size, &handle_type_size);
 				
 				if (NT_ERROR(status)) {
-					Console << i << U" Error " << status << U" needed: " << handle_type_size << U" size: " << sizeof(*handle_type);
-					if (status == STATUS_ACCESS_DENIED) {
-						Console << U"STATUS_ACCESS_DENIED";
-					}
-					else if (status == STATUS_INVALID_HANDLE) {
-						Console << U"STATUS_INVALID_HANDLE";
-					}
-					else if (status == STATUS_INFO_LENGTH_MISMATCH) {
-						Console << U"STATUS_INFO_LENGTH_MISMATCH";
-					}
 					delete[](handle_type);
-
 					continue;
 				}
-				else {
-					Console << i << U" Object Type: " << Unicode::FromWstring(handle_type->TypeName.Buffer);
+				/*
+				if (Unicode::FromWstring(handle_type->TypeName.Buffer) == U"Process") {
 					delete[](handle_type);
+					continue;
+				}*/
+				
+				if (pSysHandleInformation->Handles[i].HandleValue != 23700) {
+					continue;
 				}
+				Console << i << U" Object Type: |" << Unicode::FromWstring(handle_type->TypeName.Buffer) << U"|";
+				delete[](handle_type);
 
 				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId << U" type: " << pSysHandleInformation->Handles[i].Object;
 				Console << GetLastError() << U" " << hProcess;
@@ -164,7 +143,7 @@ void Main()
 				// ファイル名を取得
 				TCHAR process_filename[1024] = { 0 };
 				GetProcessImageFileName(hProcess, process_filename, 1024);
-				Console << Unicode::FromWstring(process_filename);
+				Console << U"Name: " << Unicode::FromWstring(process_filename);
 
 				//GetModuleFileNameEx(hProcess, )
 			}
