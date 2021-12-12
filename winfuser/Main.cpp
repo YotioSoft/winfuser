@@ -98,24 +98,73 @@ void Main()
 				}*/
 
 				// FileTypeでなければスキップ
-
-				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId;
-
+				//if (pSysHandleInformation->Handles[i].ObjectTypeIndex)
+				// タイプの取得
+				
 				HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, false, pSysHandleInformation->Handles[i].HandleValue);
 				if (hProcess == INVALID_HANDLE_VALUE) {
-					Console << U"Open Error";
+					Console << U"Open Error: " << GetLastError();
 					continue;
 				}
+				
+				/*
+				HANDLE hDup;
+				if (!DuplicateHandle(hProcess, (HANDLE)pSysHandleInformation->Handles[i].Object, GetCurrentProcess(), &hDup, 0, false, DUPLICATE_SAME_ACCESS))
+				{
+					Console << U"DuplicateHandle failed!";
+					continue;
+				}
+				*/
+				ULONG handle_type_size;
+				PPUBLIC_OBJECT_TYPE_INFORMATION handle_type = NULL;
+				NTSTATUS status;
+				handle_type_size = sizeof(handle_type);
+
+				do {
+					/*
+					free(pSysHandleInformation);
+					pSysHandleInformation = new SYSTEM_HANDLE_INFORMATION_EX;
+					status = fpNtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemExtendedHandleInformation, pSysHandleInformation, sys_hwnd_info_size, &needed);
+					sys_hwnd_info_size += sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX) * 0x10000;
+					Print << sys_hwnd_info_size;
+					*/
+					handle_type_size += sizeof(PUBLIC_OBJECT_TYPE_INFORMATION) * 0x10000;
+					Console << handle_type_size;
+					PPUBLIC_OBJECT_TYPE_INFORMATION newPtr = (PPUBLIC_OBJECT_TYPE_INFORMATION)realloc(handle_type, handle_type_size);
+					if (NULL == newPtr)
+						break;
+					handle_type = newPtr;
+					ULONG returnLength = 0;
+					status = fpNtQueryObject((HANDLE)pSysHandleInformation->Handles[i].HandleValue, ObjectTypeInformation, handle_type, 0, &handle_type_size);
+				} while (status == STATUS_INFO_LENGTH_MISMATCH);
+				
+				if (NT_ERROR(status)) {
+					Console << i << U" Error " << status << U" needed: " << handle_type_size << U" size: " << sizeof(*handle_type);
+					if (status == STATUS_ACCESS_DENIED) {
+						Console << U"STATUS_ACCESS_DENIED";
+					}
+					else if (status == STATUS_INVALID_HANDLE) {
+						Console << U"STATUS_INVALID_HANDLE";
+					}
+					else if (status == STATUS_INFO_LENGTH_MISMATCH) {
+						Console << U"STATUS_INFO_LENGTH_MISMATCH";
+					}
+					delete[](handle_type);
+
+					continue;
+				}
+				else {
+					Console << i << U" Object Type: " << Unicode::FromWstring(handle_type->TypeName.Buffer);
+					delete[](handle_type);
+				}
+
+				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId << U" type: " << pSysHandleInformation->Handles[i].Object;
 				Console << GetLastError() << U" " << hProcess;
 
 				// ファイル名を取得
-				LPWSTR using_filepath = {};
-				int using_filepath_size = 2048;
-				if (GetFinalPathNameByHandle(hProcess, using_filepath, using_filepath_size, 0) == 0) {
-					Console << U"GetFinalPathNameByHandle failed: " << GetLastError();
-					continue;
-				}
-				Console << Unicode::FromWstring((std::wstring)using_filepath);
+				TCHAR process_filename[1024] = { 0 };
+				GetProcessImageFileName(hProcess, process_filename, 1024);
+				Console << Unicode::FromWstring(process_filename);
 
 				//GetModuleFileNameEx(hProcess, )
 			}
