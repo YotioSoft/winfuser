@@ -101,7 +101,7 @@ void Main()
 				//if (pSysHandleInformation->Handles[i].ObjectTypeIndex)
 				// タイプの取得
 				
-				HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, false, pSysHandleInformation->Handles[i].HandleValue);
+				HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, false, pSysHandleInformation->Handles[i].UniqueProcessId);
 				if (hProcess == INVALID_HANDLE_VALUE) {
 					Console << U"Open Error: " << GetLastError();
 					continue;
@@ -125,27 +125,43 @@ void Main()
 					delete[](handle_type);
 					continue;
 				}
-				/*
-				if (Unicode::FromWstring(handle_type->TypeName.Buffer) == U"Process") {
+				
+				if (Unicode::FromWstring(handle_type->TypeName.Buffer) != U"File") {
 					delete[](handle_type);
 					continue;
-				}*/
-				
+				}
+				/*
 				if (pSysHandleInformation->Handles[i].HandleValue != 23700) {
 					continue;
-				}
+				}*/
+				Console << U"hProcess: " << hProcess;
 				Console << i << U" Object Type: |" << Unicode::FromWstring(handle_type->TypeName.Buffer) << U"|";
 				delete[](handle_type);
 
-				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId << U" type: " << pSysHandleInformation->Handles[i].Object;
+				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId << U" type: " << pSysHandleInformation->Handles[i].ObjectTypeIndex;
 				Console << GetLastError() << U" " << hProcess;
 
 				// ファイル名を取得
+				ULONG handle_name_size = 0;
+				fpNtQueryObject((HANDLE)pSysHandleInformation->Handles[i].HandleValue, ObjectNameInformation, NULL, 0, &handle_name_size);
+				POBJECT_NAME_INFORMATION handle_name = (POBJECT_NAME_INFORMATION)malloc(handle_name_size);
+
+				status = fpNtQueryObject((HANDLE)pSysHandleInformation->Handles[i].HandleValue, ObjectNameInformation, handle_name, handle_name_size, &handle_name_size);
+
+				if (NT_ERROR(status)) {
+					delete[](handle_name);
+					continue;
+				}
+
+				Console << U"Handle Name: " << Unicode::FromWstring(handle_name->NAME.Buffer);
+
+
 				TCHAR process_filename[1024] = { 0 };
 				GetProcessImageFileName(hProcess, process_filename, 1024);
 				Console << U"Name: " << Unicode::FromWstring(process_filename);
 
 				//GetModuleFileNameEx(hProcess, )
+				
 			}
 			Print << U"Done.";
 		}

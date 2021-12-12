@@ -59,4 +59,10 @@ typedef struct {
 	SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX Handles[1];
 } SYSTEM_HANDLE_INFORMATION_EX, * PSYSTEM_HANDLE_INFORMATION_EX;
 
+typedef struct {
+	UNICODE_STRING NAME;
+	WCHAR NameBuffer[0];
+} OBJECT_NAME_INFORMATION, * POBJECT_NAME_INFORMATION;
+
 static const int SystemExtendedHandleInformation = 0x40;
+static const OBJECT_INFORMATION_CLASS ObjectNameInformation = (OBJECT_INFORMATION_CLASS)0x1;
