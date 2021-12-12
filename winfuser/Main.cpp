@@ -2,15 +2,12 @@
 #include <Siv3D/Windows/Windows.hpp>
 #include <fileapi.h>
 #include <string>
-#include <regex>
 
 #include <winternl.h>
 #include <ntstatus.h>
 
 #include <RestartManager.h>
 #include <winerror.h>
-
-#include <locale.h>
 
 #pragma comment(lib, "Rstrtmgr.lib")
 
@@ -26,8 +23,6 @@
 
 void Main()
 {
-	setlocale(LC_CTYPE, "");
-
 	// 背景の色を設定 | Set background color
 	Scene::SetBackground(ColorF{ 0.8, 0.9, 1.0 });
 
@@ -95,17 +90,12 @@ void Main()
 			// ファイルをセッションに登録
 			//wchar_t* buf;
 			//file_path.toWstr().assign(buf);
-			LPCWSTR files_list[256] = {};
-			for (int i = 0; i < files_n; i++) {
-				std::string str = files[i].path.toUTF8();
-				str = std::regex_replace(str, std::regex("/"), "\\");
-				std::wstring wstr = Unicode::FromUTF8(str).toWstr();
-
-				files_list[i] = L"D:\\課題表紙.docx";//(LPCWSTR)wstr.c_str();
-				Print << Unicode::FromWstring(files_list[i]);
-			}
-			//PCWSTR file_path = L"D:\\ts.txt";
-			dw_error = RmRegisterResources(dw_session, files_n, files_list, 0, NULL, 0, NULL);
+			
+			std::wstring wstr = files[0].path.toWstr();
+			PCWSTR pcwstr = wstr.c_str();
+			Print << Unicode::FromWstring(pcwstr);
+			
+			dw_error = RmRegisterResources(dw_session, files_n, &pcwstr, 0, NULL, 0, NULL);
 			if (dw_error != ERROR_SUCCESS) {
 				Console << U"Err";
 				throw std::runtime_error("fail to register target files.");
