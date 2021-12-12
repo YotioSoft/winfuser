@@ -12,8 +12,8 @@
 #define RM_SESSION_KEY_LEN		sizeof(GUID)
 #define CCH_RM_SESSION_KEY		RM_SESSION_KEY_LEN * 2
 
-// ハンドル一覧の取得
-PSYSTEM_HANDLE_INFORMATION_EX getHandleList() {
+// オブジェクト一覧の取得
+PSYSTEM_HANDLE_INFORMATION_EX getObjectList() {
 	PSYSTEM_HANDLE_INFORMATION_EX pSysHandleInformation = NULL;
 	DWORD sys_hwnd_info_size = sizeof(pSysHandleInformation);
 	DWORD needed = 0;
@@ -37,8 +37,8 @@ PSYSTEM_HANDLE_INFORMATION_EX getHandleList() {
 	return pSysHandleInformation;
 }
 
-// ハンドルのタイプを取得
-String getHandleType(HANDLE handle) {
+// オブジェクトのタイプを取得
+String getObjectType(HANDLE handle) {
 	ULONG handle_type_size = 0;
 	fpNtQueryObject(handle, ObjectTypeInformation, NULL, 0, &handle_type_size);
 	PPUBLIC_OBJECT_TYPE_INFORMATION handle_type = (PPUBLIC_OBJECT_TYPE_INFORMATION)malloc(handle_type_size);
@@ -55,14 +55,31 @@ String getHandleType(HANDLE handle) {
 	return ret_str;
 }
 
-//
-
 // プロセスのファイルパスを取得
 String getProcessFilePath(HANDLE handle) {
 	TCHAR process_filename[1024] = { 0 };
 	GetProcessImageFileName(handle, process_filename, 1024);
 
 	return Unicode::FromWstring(process_filename);
+}
+
+// ファイルパスを取得
+String getFilePath(HANDLE handle) {
+	ULONG handle_name_size = 0;
+	fpNtQueryObject(handle, ObjectNameInformation, NULL, 0, &handle_name_size);
+	POBJECT_NAME_INFORMATION handle_name = (POBJECT_NAME_INFORMATION)malloc(handle_name_size);
+
+	NTSTATUS status = fpNtQueryObject(handle, ObjectNameInformation, handle_name, handle_name_size, &handle_name_size);
+
+	if (NT_ERROR(status)) {
+		free(handle_name);
+		return U"";
+	}
+
+	String ret_str = Unicode::FromWstring(handle_name->NameBuffer);
+	free(handle_name);
+
+	return ret_str;
 }
 
 void Main()
@@ -115,8 +132,8 @@ void Main()
 				Print << Unicode::FromWstring((std::wstring)files_list[i]);
 			}
 
-			// システム上のすべてのハンドルを取得
-			PSYSTEM_HANDLE_INFORMATION_EX pSysHandleInformation = getHandleList();
+			// システム上のすべてのオブジェクトを取得
+			PSYSTEM_HANDLE_INFORMATION_EX pSysHandleInformation = getObjectList();
 
 			if (pSysHandleInformation == NULL) {
 				Console << U"Couldn't get handle list";
@@ -124,28 +141,40 @@ void Main()
 			}
 
 			Print << U"TOTAL: " << pSysHandleInformation->HandleCount;
+
+			int before_handle = 0;
 			for (ULONG i = 0; i < pSysHandleInformation->HandleCount; i++) {
+				if (before_handle != pSysHandleInformation->Handles[i].HandleValue) {
+					before_handle = pSysHandleInformation->Handles[i].HandleValue;
+				}
+				else {
+					continue;
+				}
+
+				// プロセスを開く
 				HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, false, pSysHandleInformation->Handles[i].HandleValue);
 				if (hProcess == INVALID_HANDLE_VALUE) {
 					Console << U"Open Error: " << GetLastError();
 					continue;
 				}
 
-				// ハンドルのタイプを取得
-				String handle_type = getHandleType((HANDLE)pSysHandleInformation->Handles[i].HandleValue);
+				// オブジェクトのタイプを取得
+				String object_type = getObjectType((HANDLE)pSysHandleInformation->Handles[i].HandleValue);
 
-				if (pSysHandleInformation->Handles[i].HandleValue != 23700) {
-					continue;
-				}
-				Console << i << U" Object Type: |" << handle_type << U"|";
+				Console << i << U" Object Type: |" << object_type << U"|";
 
-				Console << i << U":" << pSysHandleInformation->Handles[i].HandleValue << U" " << pSysHandleInformation->Handles[i].UniqueProcessId << U" type: " << pSysHandleInformation->Handles[i].Object;
+				Console << U"i=" << i << U" : PID=" << pSysHandleInformation->Handles[i].HandleValue;
 				Console << GetLastError() << U" " << hProcess;
 
-				// ファイル名を取得
+				// プロセスのファイル名を取得
 				String process_filepath = getProcessFilePath(hProcess);
-				Console << process_filepath;
+				Console << U"Process filepath: " << process_filepath;
+
+				// ファイルパスを取得
+				String file_filepath = getFilePath((HANDLE)pSysHandleInformation->Handles[i].HandleValue);
+				Console << U"File filepath: " << file_filepath;
 			}
+			free(pSysHandleInformation);
 			Print << U"Done.";
 		}
 	}
