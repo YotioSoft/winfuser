@@ -82,8 +82,13 @@ String getFilePath(HANDLE handle) {
 	return ret_str;
 }
 
-void Main()
-{
+// モジュールのファイルパスを取得
+// 要：すでにプロセスが開かれていること
+String getModuleFilePath(HANDLE handle) {
+	GetModuleFileNameEx(handle, )
+}
+
+void Main() {
 	// 背景の色を設定 | Set background color
 	Scene::SetBackground(ColorF{ 0.8, 0.9, 1.0 });
 
@@ -112,6 +117,9 @@ void Main()
 
 	//bool get = GetFileInformationByHandle()
 	HANDLE hHandle = CreateEvent(NULL, FALSE, TRUE, L"sample");
+
+	DWORD current_pid = GetCurrentProcessId();
+	Print << U"Current pID: " << current_pid;
 
 	while (System::Update())
 	{
@@ -144,6 +152,10 @@ void Main()
 
 			int before_handle = 0;
 			for (ULONG i = 0; i < pSysHandleInformation->HandleCount; i++) {
+				if (pSysHandleInformation->Handles[i].ObjectTypeIndex == 0) {
+					continue;
+				}
+
 				if (before_handle != pSysHandleInformation->Handles[i].HandleValue) {
 					before_handle = pSysHandleInformation->Handles[i].HandleValue;
 				}
@@ -161,7 +173,7 @@ void Main()
 				// オブジェクトのタイプを取得
 				String object_type = getObjectType((HANDLE)pSysHandleInformation->Handles[i].HandleValue);
 
-				Console << i << U" Object Type: |" << object_type << U"|";
+				Console << i << U" Object Type: |" << object_type << U"|" << U" Type Index: " << pSysHandleInformation->Handles[i].ObjectTypeIndex;
 
 				Console << U"i=" << i << U" : PID=" << pSysHandleInformation->Handles[i].HandleValue;
 				Console << GetLastError() << U" " << hProcess;
